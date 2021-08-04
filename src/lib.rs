@@ -218,11 +218,7 @@ impl PrometheusMetricsBuilder {
     pub fn build(self) -> Result<PrometheusMetrics, Error> {
         let registry = match self.registry {
             Some(registry) => registry,
-            None => Registry::new_custom(
-                Some(self.namespace.clone()),
-                Some(self.const_labels.clone()),
-            )
-            .unwrap(),
+            None => Registry::new(),
         };
 
         let incoming_requests = IntCounterVec::new(
