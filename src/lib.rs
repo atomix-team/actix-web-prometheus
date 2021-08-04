@@ -226,17 +226,24 @@ impl PrometheusMetricsBuilder {
         };
 
         let incoming_requests = IntCounterVec::new(
-            Opts::new("incoming_requests", "Incoming Requests"),
+            Opts::new("incoming_requests", "Incoming Requests")
+                .namespace(&self.namespace)
+                .const_labels(self.const_labels.clone()),
             &["endpoint", "method", "status"],
         )?;
 
         let response_time = HistogramVec::new(
-            HistogramOpts::new("response_time", "Response Times").buckets(self.buckets.clone()),
+            HistogramOpts::new("response_time", "Response Times")
+                .namespace(&self.namespace)
+                .const_labels(self.const_labels.clone())
+                .buckets(self.buckets.clone()),
             &["endpoint", "method", "status"],
         )?;
 
         let response_codes = IntCounterVec::new(
-            Opts::new("response_code", "Response Codes"),
+            Opts::new("response_code", "Response Codes")
+                .namespace(&self.namespace)
+                .const_labels(self.const_labels.clone()),
             &["endpoint", "method", "statuscode", "type"],
         )?;
 
