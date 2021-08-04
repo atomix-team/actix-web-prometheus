@@ -1,5 +1,6 @@
 [package]
 name = "actix-web-prometheus"
+description = "Actix web middleware for prometheus metrics"
 version = "0.1.0-beta.8"
 edition = "2018"
 repository = "https://github.com/atomix-team/actix-web-prometheus"
