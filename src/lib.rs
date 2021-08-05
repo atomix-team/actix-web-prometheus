@@ -157,8 +157,8 @@ use prometheus::{HistogramOpts, HistogramVec, IntCounterVec, Opts, Registry};
 use std::error::Error as StdError;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Arc;
 use std::task::{Context, Poll};
+use std::rc::Rc;
 
 #[derive(Debug)]
 /// Builder to create new PrometheusMetrics struct.HistogramVec
@@ -315,7 +315,7 @@ impl PrometheusMetrics {
 
         let elapsed = self.clock.delta(start, end);
         let duration =
-            (elapsed.as_secs() as f64) + f64::from(elapsed.subsec_nanos()) / 1_000_000_000_f64;
+            elapsed.as_secs_f64();
 
         self.response_time
             .with_label_values(&[path, &method, &status])
@@ -366,14 +366,14 @@ where
     fn new_transform(&self, service: S) -> Self::Future {
         ready(Ok(PrometheusMetricsMiddleware {
             service,
-            inner: Arc::new(self.clone()),
+            inner: Rc::new(self.clone()),
         }))
     }
 }
 
 pub struct PrometheusMetricsMiddleware<S> {
     service: S,
-    inner: Arc<PrometheusMetrics>,
+    inner: Rc<PrometheusMetrics>,
 }
 
 #[pin_project::pin_project]
@@ -385,7 +385,7 @@ where
     #[pin]
     fut: S::Future,
     start: u64,
-    inner: Arc<PrometheusMetrics>,
+    inner: Rc<PrometheusMetrics>,
     _t: PhantomData<B>,
 }
 
@@ -427,22 +427,24 @@ where
                     HeaderValue::from_static("text/plain; version=0.0.4; charset=utf-8"),
                 );
 
+                let body = AnyBody::from_message(inner.metrics());
+
                 StreamMetrics {
-                    body: AnyBody::from_message(inner.metrics()),
+                    body,
                     size: 0,
                     start,
-                    end: inner.clock.end(),
                     inner,
                     status: head.status,
                     path: pattern_or_path,
                     method,
                 }
             } else {
+                let body = AnyBody::from_message(body);
+
                 StreamMetrics {
-                    body: AnyBody::from_message(body),
+                    body,
                     size: 0,
                     start,
-                    end: inner.clock.end(),
                     inner,
                     status: head.status,
                     path: pattern_or_path,
@@ -487,8 +489,7 @@ pub struct StreamMetrics<B> {
     body: B,
     size: usize,
     start: u64,
-    end: u64,
-    inner: Arc<PrometheusMetrics>,
+    inner: Rc<PrometheusMetrics>,
     status: StatusCode,
     path: String,
     method: Method,
@@ -499,7 +500,7 @@ impl<B> PinnedDrop for StreamMetrics<B> {
     fn drop(self: Pin<&mut Self>) {
         // update the metrics for this request at the very end of responding
         self.inner
-            .update_metrics(&self.path, &self.method, self.status, self.start, self.end);
+            .update_metrics(&self.path, &self.method, self.status, self.start, self.inner.clock.end());
     }
 }
 
