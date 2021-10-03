@@ -1,5 +1,4 @@
-///!
-/// Module which defines error which can happen within this crate.
+//! Module which defines error which can happen within this crate
 use thiserror::Error;
 
 /// Error type that describes all possible errors.

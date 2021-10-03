@@ -157,8 +157,8 @@ use prometheus::{HistogramOpts, HistogramVec, IntCounterVec, Opts, Registry};
 use std::error::Error as StdError;
 use std::future::Future;
 use std::pin::Pin;
-use std::task::{Context, Poll};
 use std::rc::Rc;
+use std::task::{Context, Poll};
 
 #[derive(Debug)]
 /// Builder to create new PrometheusMetrics struct.HistogramVec
@@ -314,8 +314,7 @@ impl PrometheusMetrics {
         let status = status_code.as_u16().to_string();
 
         let elapsed = self.clock.delta(start, end);
-        let duration =
-            elapsed.as_secs_f64();
+        let duration = elapsed.as_secs_f64();
 
         self.response_time
             .with_label_values(&[path, &method, &status])
@@ -499,8 +498,13 @@ pub struct StreamMetrics<B> {
 impl<B> PinnedDrop for StreamMetrics<B> {
     fn drop(self: Pin<&mut Self>) {
         // update the metrics for this request at the very end of responding
-        self.inner
-            .update_metrics(&self.path, &self.method, self.status, self.start, self.inner.clock.end());
+        self.inner.update_metrics(
+            &self.path,
+            &self.method,
+            self.status,
+            self.start,
+            self.inner.clock.end(),
+        );
     }
 }
 
