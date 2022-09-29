@@ -12,16 +12,16 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-web = { version = "4.0.0-beta.10", default-features = false }
-actix-service = { version = "2.0.1", default-features = false }
-prometheus = { version = "0.13.0", default-features = false }
-thiserror = "1.0.30"
-pin-project = "1.0.8"
-quanta = "0.9.3"
+actix-web = { version = "4.2.1", default-features = false }
+actix-service = { version = "2.0.2", default-features = false }
+prometheus = { version = "0.13.2", default-features = false }
+thiserror = "1.0.37"
+pin-project = "1.0.12"
+quanta = "0.10.1"
 futures-lite = "1.12.0"
 
 [dev-dependencies]
-tokio = "1.12.0"
+tokio = "1.21.2"
 
 [features]
 process = ["prometheus/process"]

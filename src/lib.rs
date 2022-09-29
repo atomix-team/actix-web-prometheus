@@ -146,8 +146,8 @@ pub mod error;
 pub use error::Error;
 
 use actix_web::{
-    dev::{BodySize, MessageBody, Service, ServiceRequest, ServiceResponse, Transform},
-    http::{header::CONTENT_TYPE, HeaderValue, Method, StatusCode},
+    dev::{Service, ServiceRequest, ServiceResponse, Transform},
+    http::{header::CONTENT_TYPE, Method, StatusCode},
     web::Bytes,
     Error as ActixError,
 };
@@ -356,7 +356,7 @@ where
     B: MessageBody + 'static,
     B::Error: Into<Box<dyn StdError + 'static>>,
 {
-    type Response = ServiceResponse<StreamMetrics<AnyBody>>;
+    type Response = ServiceResponse<StreamMetrics<BoxBody>>;
     type Error = ActixError;
     type Transform = PrometheusMetricsMiddleware<S>;
     type InitError = ();
@@ -394,7 +394,7 @@ where
     B::Error: Into<Box<dyn StdError + 'static>>,
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = ActixError>,
 {
-    type Output = Result<ServiceResponse<StreamMetrics<AnyBody>>, ActixError>;
+    type Output = Result<ServiceResponse<StreamMetrics<BoxBody>>, ActixError>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.project();
@@ -426,7 +426,7 @@ where
                     HeaderValue::from_static("text/plain; version=0.0.4; charset=utf-8"),
                 );
 
-                let body = AnyBody::from_message(inner.metrics());
+                let body = inner.metrics().boxed();
 
                 StreamMetrics {
                     body,
@@ -438,7 +438,7 @@ where
                     method,
                 }
             } else {
-                let body = AnyBody::from_message(body);
+                let body = body.boxed();
 
                 StreamMetrics {
                     body,
@@ -460,7 +460,7 @@ where
     B::Error: Into<Box<dyn StdError + 'static>>,
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = ActixError>,
 {
-    type Response = ServiceResponse<StreamMetrics<AnyBody>>;
+    type Response = ServiceResponse<StreamMetrics<BoxBody>>;
     type Error = S::Error;
     type Future = MetricsResponse<S, B>;
 
@@ -469,14 +469,15 @@ where
     fn call(&self, req: ServiceRequest) -> Self::Future {
         MetricsResponse {
             fut: self.service.call(req),
-            start: self.inner.clock.start(),
+            start: self.inner.clock.raw(),
             inner: self.inner.clone(),
             _t: PhantomData,
         }
     }
 }
 
-use actix_web::dev::AnyBody;
+use actix_web::body::{BodySize, BoxBody, MessageBody};
+use actix_web::http::header::HeaderValue;
 use pin_project::{pin_project, pinned_drop};
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -503,7 +504,7 @@ impl<B> PinnedDrop for StreamMetrics<B> {
             &self.method,
             self.status,
             self.start,
-            self.inner.clock.end(),
+            self.inner.clock.raw(),
         );
     }
 }
